@@ -17,13 +17,13 @@
     "winston": "^3.3.3",
     "web3-eth-abi": "1.7.3",
     "ethers": "5.7.1",
+    "bigint-mod-arith": "3.1.2",
     "@ethersproject/providers": "5.7.1"
   },
   "devDependencies": {
     "@commitlint/cli": "9.1.2",
     "@commitlint/config-conventional": "12.0.1",
     "@openzeppelin/contracts": "^4.5.0",
-    "@openzeppelin/contracts-upgradeable": "^4.5.2",
     "@openzeppelin/hardhat-upgrades": "1.13.0",
     "@tsconfig/recommended": "^1.0.1",
     "@typechain/ethers-v5": "7.0.0",
