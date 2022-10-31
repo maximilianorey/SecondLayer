@@ -11,20 +11,19 @@ describe("SecondLayer", function () {
   it("SOMETHING", async () => {
     const wallets = await ethers.getSigners();
 
-    const n = BigInt("856911196688842909152845259498660691866048457");
-    const m = BigInt("878944667195838994447084255955267549107925907");
-    const p = BigInt(
-      "57865308379927293945012186408951094763827862981364399883321545244649849672021"
-    );
+    const n = BigInt("11071");
+    const m = BigInt("11971");
+    const p = BigInt("1260302388285706312825457878883");
 
     const secondLayerFactory = await ethers.getContractFactory("NFTsManager");
     const secondLayer = await secondLayerFactory.deploy(
-      "856911196688842909152845259498660691866048457",
-      "878944667195838994447084255955267549107925907",
-      "57865308379927293945012186408951094763827862981364399883321545244649849672021"
+      "11071",
+      "11971",
+      "1260302388285706312825457878883"
     );
 
     const g = (await secondLayer.getGenerator(wallets[0].address)).toBigInt();
+
     const a = BigInt(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER));
 
     const fReg = modPow(g, n * a, p);
@@ -37,29 +36,44 @@ describe("SecondLayer", function () {
     ).to.be.equal("1");
   });
 
-  it.only("Test Deposit", async () => {
+  it("Test Deposit", async () => {
     const [w] = await ethers.getSigners();
-    const n = BigInt("856911196688842909152845259498660691866048457");
-    const m = BigInt("878944667195838994447084255955267549107925907");
-    const p = BigInt(
-      "57865308379927293945012186408951094763827862981364399883321545244649849672021"
-    );
+    const n = BigInt("11071");
+    const m = BigInt("11971");
+    const p = BigInt("1260302388285706312825457878883");
 
     const secondLayerFactory = await ethers.getContractFactory("NFTsManager");
     const erc721Factory = await ethers.getContractFactory("TestERC721");
     const erc721 = await erc721Factory.deploy("TEST", "TE");
     const secondLayer = await secondLayerFactory.deploy(
-      "856911196688842909152845259498660691866048457",
-      "878944667195838994447084255955267549107925907",
-      "57865308379927293945012186408951094763827862981364399883321545244649849672021"
+      "11071",
+      "11971",
+      "1260302388285706312825457878883"
     );
-
-    const a = BigInt(5);
 
     const g = (await secondLayer.getGenerator(w.address)).toBigInt();
 
-    const fReg = modPow(g, n * a, p);
-    const sReg = modPow(g, p - BigInt(2) - m * a, p);
+    console.log(g.toString());
+
+    let a = BigInt(1);
+    let fReg = BigInt(1);
+    let sReg = BigInt(1);
+    a = BigInt(5);
+    fReg = modPow(g, n * a, p);
+    sReg = modPow(g, p - BigInt(2) - m * a, p);
+
+    expect(modPow(g, p - BigInt(1) - m * a, p).toString()).to.be.equal(
+      ((modPow(g, p - BigInt(2) - m * a, p) * g) % p).toString()
+    );
+    expect(
+      ((modPow(fReg, m, p) * modPow(sReg * g, n, p)) % p).toString()
+    ).to.be.equal("1");
+
+    console.log(fReg);
+    console.log(sReg);
+
+    console.log(`F MOD POW: ${modPow(fReg, m, p).toString()}`);
+    console.log(`S MOD POW: ${modPow(sReg * g, n, p).toString()}`);
 
     await (await erc721.mint(w.address, "0")).wait();
 
@@ -68,8 +82,9 @@ describe("SecondLayer", function () {
         erc721.address,
         "0",
         fReg.toString(),
-        sReg.toString(),
-        g.toString()
+        sReg.toString()
+        //modPow(fReg, m, p).toString(),
+        //modPow(sReg * g, n, p).toString()
       )
     ).wait();
   });
@@ -82,19 +97,17 @@ describe("SecondLayer", function () {
     const tokens: Array<bigint> = new Array(iterations);
     const generators: Array<bigint> = new Array(iterations);
 
-    const n = BigInt("856911196688842909152845259498660691866048457");
-    const m = BigInt("878944667195838994447084255955267549107925907");
-    const p = BigInt(
-      "57865308379927293945012186408951094763827862981364399883321545244649849672021"
-    );
+    const n = BigInt("11071");
+    const m = BigInt("11971");
+    const p = BigInt("1260302388285706312825457878883");
 
     const secondLayerFactory = await ethers.getContractFactory("NFTsManager");
     const erc721Factory = await ethers.getContractFactory("TestERC721");
     const erc721 = await erc721Factory.deploy("TEST", "TE");
     const secondLayer = await secondLayerFactory.deploy(
-      "856911196688842909152845259498660691866048457",
-      "878944667195838994447084255955267549107925907",
-      "57865308379927293945012186408951094763827862981364399883321545244649849672021"
+      "11071",
+      "11971",
+      "1260302388285706312825457878883"
     );
 
     for (let i = 0; i < iterations; i += 1) {
@@ -119,15 +132,14 @@ describe("SecondLayer", function () {
       ).to.be.equal("1");
 
       await (
-        await secondLayer
-          .connect(w)
-          .deposit(
-            erc721.address,
-            i.toString(),
-            fReg.toString(),
-            sReg.toString(),
-            g.toString()
-          )
+        await secondLayer.connect(w).deposit(
+          erc721.address,
+          i.toString(),
+          fReg.toString(),
+          sReg.toString()
+          //modPow(fReg, m, p).toString(),
+          //modPow(sReg * c, n, p).toString()
+        )
       ).wait();
       await (
         await erc721
@@ -136,21 +148,44 @@ describe("SecondLayer", function () {
       ).wait();
     }
 
-    for (let i = 0; i < iterations; i += 1) {
+    for (let i = 0; i < 10; i += 1) {
       let fRegister = BigInt("1");
       let sRegister = BigInt("1");
-      for (let j = 0; j < 100; j += 1) {
+      for (let j = 0; j < iterations; j += 1) {
+        console.log(`INTERNAL ITERATION: ${j}`);
         const generator = generators[j];
         const oldA = tokens[j];
         const newA = BigInt(
           Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)
         );
         tokens[j] = newA;
-        fRegister = fRegister * modPow(generator, p - BigInt(1) - n * oldA, p);
-        sRegister = sRegister * modPow(generator, m * newA, p);
-        fRegister = fRegister * modPow(generator, n * newA, p);
-        sRegister = sRegister * modPow(generator, p - BigInt(1) - m * newA, p);
+        fRegister =
+          (fRegister * modPow(generator, p - BigInt(1) - n * oldA, p)) % p;
+        sRegister =
+          (sRegister * modPow(generator, m * oldA + BigInt(1), p)) % p;
+        fRegister = (fRegister * modPow(generator, n * newA, p)) % p;
+        sRegister =
+          (sRegister * modPow(generator, p - BigInt(2) - m * newA, p)) % p;
+        expect(
+          (
+            (modPow(
+              (fRegister * (await secondLayer.getFRegister()).toBigInt()) % p,
+              m,
+              p
+            ) *
+              modPow(
+                (sRegister *
+                  (await secondLayer.getSRegister()).toBigInt() *
+                  (await secondLayer.getControl()).toBigInt()) %
+                  p,
+                n,
+                p
+              )) %
+            p
+          ).toString()
+        ).to.be.equal("1");
       }
+      await (await secondLayer.saveBlock(fRegister, sRegister)).wait();
       console.log(`BLOCK: ${i}`);
       await (await secondLayer.saveBlock(fRegister, sRegister)).wait();
     }

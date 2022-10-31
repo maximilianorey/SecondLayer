@@ -26,9 +26,9 @@ contract NFTsManager{
         control = 1;
     }
 
-    function modPow(uint256 x, uint256 y, uint256 mod) public pure returns (uint256){
+    function modPow(uint256 x, uint256 y, uint256 modu) public pure returns (uint256){
         unchecked {
-            /*// Initialize answer
+            // Initialize answer
             uint256 res = 1;
         
             // Check till the number becomes zero
@@ -36,46 +36,62 @@ contract NFTsManager{
         
                 // If y is odd, multiply x with result
                 if (y % 2 == 1)
-                    res = (res * x);
+                    res = mulmod(res , x,modu);
         
                 // y = y/2
                 y = y >> 1;
         
                 // Change x to x^2
-                x = (x * x);
+                x = mulmod(x , x,modu);
             }
-            return res % mod;*/
-            return (x ** y) % mod;
+            return res % modu;
         }
+        /*unchecked {     
+            return (x ** y) % modu;
+        }*/
     }
 
     function getGenerator(address dir) public view returns (uint256){
         unchecked{
-            return (uint256(uint160(dir)) ** (nonces[dir] + 1)) % p;
+            return(uint256(uint160(dir)) * 2 - 1) ** (nonces[dir] + 1);
         }
     }
 
-    function deposit(address contractAddress, uint256 tokenId, uint256 fRegister,uint256 sRegister,uint256 gen) public{
+    function getControl() public view returns(uint256){
+        return control;
+    }
+
+    function getFRegister() public view returns(uint256){
+        return firstRegister;
+    }
+
+    function getSRegister() public view returns(uint256){
+        return secondRegister;
+    }
+
+    function deposit(address contractAddress, uint256 tokenId, uint256 fRegister,uint256 sRegister) public{
         require(fRegister!=0,"fRegister can not be zero");
         require(sRegister!=0,"sRegister can not be zero");
-        require(ERC721(contractAddress).ownerOf(tokenId)==msg.sender,"SENDER IS NOT OWNER");
         uint256 nonceSender = nonces[msg.sender] + 1;
         uint256 generator;
+        require(ERC721(contractAddress).ownerOf(tokenId)==msg.sender);
         unchecked {
-            generator = modPow(uint256(uint160(msg.sender)) , nonceSender,p);            
+            //generator = 1152345668272086887389084172046127027068235407060;
+            generator = (uint256(uint160(msg.sender)) * 2 - 1) ** nonceSender;
         }
         require(generator!=0,"NULL GENERATOR");
-        require(gen==generator,"BAD GENERATOR");
         nonces[msg.sender] = nonceSender;
         erc721[contractAddress][tokenId] = generator;
         uint256 c;
         uint256 operation;
         unchecked{
             c = generator;
+            uint256 op1 = modPow(fRegister, m,p);
+            uint256 op2 = mulmod(modPow(sRegister, n,p),modPow(c, n,p),p);
             require(sRegister*c !=0,'PROBLEM0');
-            require(modPow(sRegister * c, n,p)!=0,'PROBLEM1');
-            require(modPow(fRegister, m,p)!=0,'PROBLEM2');
-            operation = mulmod(modPow(fRegister, m,p) , modPow(sRegister * c, n,p) ,p);
+            //require(op1==check1,string(abi.encodePacked("fRegister: EXPECTED: ",Strings.toString(check1), " OBTAIN: ",Strings.toString(op1))));
+            //require(op2==check2,string(abi.encodePacked("sREGISTER: EXPECTED: ",Strings.toString(check2), " OBTAIN: ",Strings.toString(op2))));
+            operation = mulmod(op1 , op2 ,p);
         }
         require(operation == 1, Strings.toHexString(operation));
         unchecked {
@@ -96,9 +112,11 @@ contract NFTsManager{
         }
         uint256 operation;
         unchecked {
-            operation = mulmod(modPow(newFirstRegister , m,p) , modPow(newSecondRegister*control,n,p),p);
+            uint256 op1 = modPow(newFirstRegister , m,p);
+            uint256 op2 = modPow(newSecondRegister * control, n,p);
+            operation = mulmod(op1 , op2,p);
         }
-        require(operation== 1, "SAVE BLOCK: INVALID CONDITION");
+        require(operation== 1, string(abi.encodePacked("SAVE BLOCK, OPERATION: ",Strings.toString(operation))));
         firstRegister = newFirstRegister;
         secondRegister = newSecondRegister;
     }
